@@ -4,7 +4,7 @@ Work in progress 🚧
 
 ## Description
 
-This project is a simple template to start a new project with Preact, tailwind and Webpack for the ESP8266, using PlatformIO.
+This project is a simple template to start a new project with Preact, tailwind and Vite for the ESP8266, using PlatformIO.
 
 ## How to use
 
