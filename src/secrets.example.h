@@ -5,5 +5,6 @@
 
 // #define SECRET_SSID "your_ssid"
 // #define SECRET_PASSWORD "your_password"
+// #define SECRET_OTA_PASSWORD "your_password" // Optional
 
 // #endif

@@ -7,9 +7,11 @@
 #include "secrets.h"
 #include "WebServer/WebServer.h"
 #include "DataFilesManger/DataFilesManager.h"
+#include "OTAManager/OTAManager.h"
 
 WebServer webServer;
 DataFilesManager DataFilesManager("/data-files");
+OTAManager otaManager;
 JsonDocument doc;
 
 // built-in LED
@@ -83,6 +85,7 @@ void setup() {
   DataFilesManager.begin();
   setupLed();
   connectToWifi(SECRET_SSID, SECRET_PASSWORD);
+  otaManager.begin();
   webServer.begin();
 
 
@@ -92,5 +95,6 @@ void setup() {
 }
 
 void loop() {
+  otaManager.loop();
   webServer.handleClient();
 }
