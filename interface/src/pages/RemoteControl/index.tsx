@@ -34,7 +34,6 @@ export function RemoteControl() {
         <Icon class="group-data-[active='false']:hidden" icon={sunFilledIcon} />
         <Icon class="group-data-[active='true']:hidden" icon={sunIcon} />
       </button>
-      {ledState}
     </div>
   )
 }

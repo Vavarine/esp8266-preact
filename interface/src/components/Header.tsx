@@ -1,17 +1,14 @@
-import { useLocation } from "preact-iso";
 import boxIcon from "@assets/box.svg?raw";
 import moreHorizontalIcon from "@assets/more-horizontal.svg?raw";
 import Icon from "./Icon";
 
 export function Header() {
-  const { url } = useLocation();
-
   return (
     <header class="">
       <div class="navbar rounded-b-xl shadow-xl overflow-visible">
         <div class="flex-1 ">
           <a class="btn btn-ghost text-xl gap-2">
-            <Icon icon={boxIcon} size={24} />
+            <Icon icon={boxIcon} />
             Esp8266 Preact
           </a>
         </div>

@@ -1,4 +1,6 @@
-interface IconProps extends React.HTMLAttributes<HTMLDivElement> {
+import type { JSX } from "preact";
+
+interface IconProps extends JSX.HTMLAttributes<HTMLDivElement> {
   icon: string;
 }
 
