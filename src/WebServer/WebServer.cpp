@@ -5,6 +5,7 @@
 WebServer::WebServer(int port) : server(port) {}
 
 void WebServer::begin() {
+  server.collectHeaders("Cookie");
   server.begin();
   server.enableCORS(true);
 
@@ -25,11 +26,39 @@ void WebServer::handleClient() {
 }
 
 void WebServer::on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction handler) {
-  server.on(uri, method, handler);
+  server.on(uri, method, [handler]() {
+    handler();
+  });
 }
 
 void WebServer::send(int code, const String &content_type, const String &content) {
   server.send(code, content_type, content);
+}
+
+String WebServer::body() {
+  return server.arg("plain");
+}
+
+void WebServer::setCookie(const String name, const String value) {
+  server.sendHeader("Set-Cookie", name + "=" + value + ";");
+}
+
+String WebServer::getCookie(const String name) {
+  if (server.hasHeader("Cookie")) {
+    
+    String cookie = server.header("Cookie");
+    int keyIndex = cookie.indexOf(name + "=");
+    if (keyIndex == -1) {
+      return ""; // Key not found
+    }
+    int valueStart = keyIndex + name.length() + 1;
+    int valueEnd = cookie.indexOf(';', valueStart);
+    if (valueEnd == -1) {
+      valueEnd = cookie.length();
+    }
+    return cookie.substring(valueStart, valueEnd);
+  }
+  return "";
 }
 
 String WebServer::arg(const String &name) {

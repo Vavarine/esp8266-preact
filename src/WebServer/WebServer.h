@@ -15,6 +15,12 @@ public:
   void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction handler);
 
   void send(int code, const String &content_type, const String &content);
+  
+  String body();
+
+  void setCookie(const String name, const String value);
+
+  String getCookie(const String name);
 
   String arg(const String &name);
 
