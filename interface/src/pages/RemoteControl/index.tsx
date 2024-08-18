@@ -1,39 +1,70 @@
-import { useEffect, useState } from "preact/hooks";
-import sunFilledIcon from "@assets/sun-filled.svg?raw";
-import sunIcon from "@assets/sun.svg?raw";
-import Icon from "@components/Icon";
+import { useCallback, useEffect, useState } from 'preact/hooks'
+import sunFilledIcon from '@assets/sun-filled.svg?raw'
+import sunIcon from '@assets/sun.svg?raw'
+import Icon from '@components/Icon'
+import { useToast } from '@/hooks/toast'
+import { useAuth } from '@/hooks/auth'
+
+interface LedData {
+	state: 0 | 1
+}
 
 export function RemoteControl() {
-  const [ledState, setLedState] = useState(false);
+	const { addToast } = useToast()
+	const { user } = useAuth()
+	const [ledState, setLedState] = useState(false)
 
-  const getLedState = async () => {
-    const response = await fetch("/api/led");
-    const data = await response.json();
+	const getLedState = async () => {
+		const response = await fetch('/api/led')
 
-    setLedState(Boolean(data.state));
-  }
-  
-  const handleButtonClick = async () => {
-    const response = await fetch("/api/led/toggle");
-    const data = await response.json();
+		if (!response.ok) {
+			return
+		}
 
-    setLedState(Boolean(data.state));
-  };
+		const data = (await response.json()) as LedData
 
-  useEffect(() => {
-    getLedState();
-  }, []);
+		setLedState(Boolean(data.state))
+	}
 
-  return (
-    <div class="container py-8 flex flex-col justify-center items-center">
-      <button
-        class="btn btn-lg btn-circle col-start-1 group"
-        onClick={handleButtonClick}
-        data-active={ledState}
-      >
-        <Icon class="group-data-[active='false']:hidden" icon={sunFilledIcon} />
-        <Icon class="group-data-[active='true']:hidden" icon={sunIcon} />
-      </button>
-    </div>
-  )
+	const handleButtonClick = useCallback(async () => {
+		if (!user) {
+			addToast({
+				description: 'This action requires authentication',
+				type: 'error'
+			})
+			return
+		}
+
+		const response = await fetch('/api/led/toggle')
+
+		if (!response.ok) {
+			addToast({
+				description: 'You do not have permission to perform this action',
+				type: 'error'
+			})
+			return
+		}
+
+		const data = (await response.json()) as LedData
+
+		setLedState(Boolean(data.state))
+	}, [user])
+
+	useEffect(() => {
+		getLedState()
+	}, [])
+
+	return (
+		<div class="container py-8 flex flex-col justify-center items-center">
+			<button
+				type="button"
+				class="btn btn-lg btn-circle col-start-1 group data-[active='true']:btn-active"
+				onClick={handleButtonClick}
+				data-active={ledState}
+			>
+				<Icon class="group-data-[active='false']:hidden" icon={sunFilledIcon} />
+				<Icon class="group-data-[active='true']:hidden" icon={sunIcon} />
+			</button>
+		</div>
+	)
 }

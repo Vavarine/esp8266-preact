@@ -10,9 +10,8 @@
 #include "OTAManager/OTAManager.h"
 
 WebServer webServer;
-DataFilesManager DataFilesManager("/data-files");
+DataFilesManager dataFilesManager("/data-files");
 OTAManager otaManager;
-JsonDocument doc;
 
 // built-in LED
 const int debugLed = D4;
@@ -40,10 +39,10 @@ void connectToWifi(const char *ssid, const char *password) {
 }
 
 void setupLed() {
-  String ledState = DataFilesManager.load("led");
+  String ledState = dataFilesManager.load("led");
 
   if (ledState == "") {
-    DataFilesManager.save("led", "0");
+    dataFilesManager.save("led", "0");
     ledState = "0";
   }
 
@@ -55,24 +54,36 @@ void setupLed() {
 
 void handleRoot() {
   Serial.println("GET /api");
-  webServer.send(200, "text/json", "{message: 'hello from esp8266!', success}");
+  webServer.send(200, "application/json", "{\"message\":\"hello from esp8266!\", \"success\":true}");
 }
 
-void handleToggleLedState() {
-  String ledState = DataFilesManager.load("led");
+void handleToggleLedState(User* user) {
+  Serial.println("GET /api/led/toggle");
+  Serial.println("Request from user: " + user->username);
+
+  String ledState = dataFilesManager.load("led");
   bool newLedState = !ledState.toInt();
 
-  DataFilesManager.save("led", String(newLedState));
+  dataFilesManager.save("led", String(newLedState));
   
   digitalWrite(LED_BUILTIN, newLedState ? LOW : HIGH);
 
-  webServer.send(200, "text/json", "{\"state\": " + String(newLedState) + "}");
+  webServer.send(200, "application/json", "{\"state\": " + String(newLedState) + "}");
 }
 
 void handleGetLedState() {
-  String ledState = DataFilesManager.load("led");
+  String ledState = dataFilesManager.load("led");
 
-  webServer.send(200, "text/json", "{\"state\": " + ledState + "}");
+  webServer.send(200, "application/json", "{\"state\": " + ledState + "}");
+}
+
+void handleRestart() {
+  Serial.println("GET /api/restart");
+  webServer.send(201);
+  delay(500);
+  WiFi.disconnect(true);
+  delay(500);
+  ESP.restart();
 }
 
 void setup() {
@@ -82,16 +93,16 @@ void setup() {
     delay(50);
   }
   
-  DataFilesManager.begin();
+  dataFilesManager.begin();
   setupLed();
   connectToWifi(SECRET_SSID, SECRET_PASSWORD);
   otaManager.begin();
   webServer.begin();
 
-
   webServer.on("/api", HTTP_GET, handleRoot);
-  webServer.on("/api/led/toggle", HTTP_GET, handleToggleLedState);
+  webServer.on("/api/led/toggle", HTTP_GET, REQUIRE_AUTH, handleToggleLedState);
   webServer.on("/api/led", HTTP_GET, handleGetLedState);
+  webServer.on("/api/restart", HTTP_POST, REQUIRE_AUTH, handleRestart);
 }
 
 void loop() {
