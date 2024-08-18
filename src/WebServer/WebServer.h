@@ -4,15 +4,20 @@
 #include <ESP8266WebServer.h>
 #include "LittleFS.h"
 
+enum Auth { REQUIRE_AUTH };
+
 class WebServer {
 public:
   WebServer(int port = 80);
+  typedef std::function<void(String payload)> TAuthenticatedHandlerFunction;
 
   void begin();
 
   void handleClient();
 
   void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction handler);
+  void on(const String &uri, HTTPMethod method, Auth auth, ESP8266WebServer::THandlerFunction handler);
+  void on(const String &uri, HTTPMethod method, Auth auth, TAuthenticatedHandlerFunction handler);
 
   void send(int code, const String &content_type, const String &content);
   
@@ -32,6 +37,9 @@ private:
   bool handleFileRead(String path);
 
   String getContentType(String filename);
+
+  bool ensureAuthenticated();
+  String authPayload();
 };
 
 #endif

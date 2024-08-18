@@ -58,7 +58,7 @@ export function RemoteControl() {
 		<div class="container py-8 flex flex-col justify-center items-center">
 			<button
 				type="button"
-				class="btn btn-lg btn-circle col-start-1 group"
+				class="btn btn-lg btn-circle col-start-1 group data-[active='true']:btn-active"
 				onClick={handleButtonClick}
 				data-active={ledState}
 			>

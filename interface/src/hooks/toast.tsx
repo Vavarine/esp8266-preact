@@ -2,6 +2,7 @@ import { ToastContainer } from '@/components/Toast/ToastContainer'
 import { createContext } from 'preact'
 import type { ComponentChildren } from 'preact'
 import { useCallback, useContext, useState } from 'preact/hooks'
+import { v4 as uuidv4 } from 'uuid'
 
 export interface ToastMessage {
 	id: string
@@ -22,7 +23,7 @@ const ToastProvider = ({ children }: { children: ComponentChildren }) => {
 
 	const addToast = useCallback(
 		({ type, title, description }: Omit<ToastMessage, 'id'>) => {
-			const id = window.crypto.randomUUID()
+			const id = uuidv4()
 
 			if (!title && !description) {
 				return

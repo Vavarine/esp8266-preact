@@ -23,7 +23,7 @@ export function Header() {
 						</Link>
 					) : (
 						<>
-							<span class="hidden sm:block">Hello, {user?.username}!</span>
+							<span class="hidden sm:block">Hello, {user.username}!</span>
 							<div class="flex-none dropdown dropdown-end">
 								<div
 									class="btn btn-square btn-ghost"
@@ -35,7 +35,7 @@ export function Header() {
 								<ul class="menu menu-sm dropdown-content shadow rounded-box mt-4 bg-base-200">
 									<li>
 										<span class="block max-w-48 w-full truncate sm:hidden">
-											Hello, {user?.username}!
+											Hello, {user.username}!
 										</span>
 									</li>
 									{user && !user.noAuth && (

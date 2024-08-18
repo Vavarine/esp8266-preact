@@ -10,11 +10,13 @@
 		"clsx": "^2.1.1",
 		"preact": "^10.13.1",
 		"preact-iso": "^2.3.2",
-		"preact-render-to-string": "^6.3.1"
+		"preact-render-to-string": "^6.3.1",
+		"uuid": "^10.0.0"
 	},
 	"devDependencies": {
 		"@preact/preset-vite": "^2.5.0",
 		"@types/node": "^22.1.0",
+		"@types/uuid": "^10.0.0",
 		"autoprefixer": "^10.4.16",
 		"daisyui": "^4.5.0",
 		"dotenv": "^16.4.5",

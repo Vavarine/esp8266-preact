@@ -7,7 +7,7 @@ interface Props {
 
 export const ToastContainer = ({ messages }: Props) => {
 	return (
-		<div class="toast toast-end toast-bottom">
+		<div class="toast max-sm:toast-center sm:toast-end toast-bottom">
 			{messages.map((message) => (
 				<Toast key={message.id} message={message} />
 			))}

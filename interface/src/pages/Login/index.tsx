@@ -44,7 +44,6 @@ export function LoginPage() {
 					description: 'Invalid username or password',
 					type: 'error'
 				})
-				console.log('error')
 			}
 
 			setLoading(false)
