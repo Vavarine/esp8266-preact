@@ -152,6 +152,10 @@ bool WebServer::handleFileRead(String path) {
 
   String contentType = getContentType(path);
 
+  if (contentType == "text/css" || contentType == "application/javascript") {
+    server.sendHeader("Cache-Control", "max-age=31536000");
+  }
+
   if (LittleFS.exists(path)) {
     File file = LittleFS.open(path, "r");
     server.streamFile(file, contentType);
