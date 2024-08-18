@@ -38,12 +38,34 @@ export function Header() {
 											Hello, {user.username}!
 										</span>
 									</li>
-									{user && !user.noAuth && (
-										<li>
-											<button type="button" onClick={signOut}>
-												Logout
-											</button>
-										</li>
+									{user && (
+										<>
+											<li>
+												<button
+													type="button"
+													class="whitespace-nowrap"
+													onClick={() =>
+														confirm('Are you sure?') &&
+														fetch('/api/restart', {
+															method: 'POST'
+														}).then(
+															(res) =>
+																res.ok &&
+																setTimeout(() => location.reload(), 2000)
+														)
+													}
+												>
+													Restart ESP
+												</button>
+											</li>
+											{!user.noAuth && (
+												<li>
+													<button type="button" onClick={signOut}>
+														Logout
+													</button>
+												</li>
+											)}
+										</>
 									)}
 								</ul>
 							</div>

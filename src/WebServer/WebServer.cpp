@@ -109,6 +109,10 @@ void WebServer::send(int code, const String &content_type, const String &content
   server.send(code, content_type, content);
 }
 
+void WebServer::send(int code) {
+  server.send(code);
+}
+
 String WebServer::body() {
   return server.arg("plain");
 }

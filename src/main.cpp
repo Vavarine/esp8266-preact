@@ -75,6 +75,15 @@ void handleGetLedState() {
   webServer.send(200, "application/json", "{\"state\": " + ledState + "}");
 }
 
+void handleRestart() {
+  Serial.println("GET /api/restart");
+  webServer.send(201);
+  delay(500);
+  WiFi.disconnect(true);
+  delay(500);
+  ESP.restart();
+}
+
 void setup() {
   Serial.begin(9600, SERIAL_8N1, SERIAL_TX_ONLY);
 
@@ -91,6 +100,7 @@ void setup() {
   webServer.on("/api", HTTP_GET, handleRoot);
   webServer.on("/api/led/toggle", HTTP_GET, REQUIRE_AUTH, handleToggleLedState);
   webServer.on("/api/led", HTTP_GET, handleGetLedState);
+  webServer.on("/api/restart", HTTP_POST, REQUIRE_AUTH, handleRestart);
 }
 
 void loop() {
