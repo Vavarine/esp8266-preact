@@ -8,7 +8,6 @@
 #include "WebServer/WebServer.h"
 #include "DataFilesManger/DataFilesManager.h"
 #include "OTAManager/OTAManager.h"
-#include "ArduinoJsonJWT/ArduinoJsonJWT.h"
 
 WebServer webServer;
 DataFilesManager dataFilesManager("/data-files");
