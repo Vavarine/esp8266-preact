@@ -2,13 +2,11 @@ import { useCallback, useEffect, useState } from 'preact/hooks'
 import sunFilledIcon from '@assets/sun-filled.svg?raw'
 import sunIcon from '@assets/sun.svg?raw'
 import Icon from '@components/Icon'
-import { api } from '@/utils/api'
-import { useEnsureAuthCallback } from '@/hooks/useEnsureAuthCallback'
 import { useToast } from '@/hooks/toast'
 import { useAuth } from '@/hooks/auth'
 
 interface LedData {
-	state: '0' | '1'
+	state: 0 | 1
 }
 
 export function RemoteControl() {
@@ -50,7 +48,7 @@ export function RemoteControl() {
 		const data = (await response.json()) as LedData
 
 		setLedState(Boolean(data.state))
-	}, [])
+	}, [user])
 
 	useEffect(() => {
 		getLedState()

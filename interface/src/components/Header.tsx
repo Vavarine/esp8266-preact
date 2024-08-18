@@ -18,22 +18,37 @@ export function Header() {
 				</div>
 				<div class="flex gap-4">
 					{!user?.username ? (
-						<Link href="/login" class="btn">Log in</Link>
+						<Link href="/login" class="btn">
+							Log in
+						</Link>
 					) : (
-						<span>Hello, {user?.username}!</span>
+						<>
+							<span class="hidden sm:block">Hello, {user?.username}!</span>
+							<div class="flex-none dropdown dropdown-end">
+								<div
+									class="btn btn-square btn-ghost"
+									role="button"
+									tabIndex={0}
+								>
+									<Icon icon={moreHorizontalIcon} />
+								</div>
+								<ul class="menu menu-sm dropdown-content shadow rounded-box mt-4 bg-base-200">
+									<li>
+										<span class="block max-w-48 w-full truncate sm:hidden">
+											Hello, {user?.username}!
+										</span>
+									</li>
+									{user && !user.noAuth && (
+										<li>
+											<button type="button" onClick={signOut}>
+												Logout
+											</button>
+										</li>
+									)}
+								</ul>
+							</div>
+						</>
 					)}
-					<div class="flex-none dropdown dropdown-end">
-						<div class="btn btn-square btn-ghost" role="button" tabIndex={0}>
-							<Icon icon={moreHorizontalIcon} />
-						</div>
-						<ul class="menu menu-sm dropdown-content shadow rounded-box mt-4 bg-base-200">
-							<li>
-								<button type="button" onClick={signOut}>
-									Logout
-								</button>
-							</li>
-						</ul>
-					</div>
 				</div>
 			</div>
 		</header>

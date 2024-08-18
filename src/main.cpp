@@ -10,10 +10,18 @@
 #include "OTAManager/OTAManager.h"
 #include "ArduinoJsonJWT/ArduinoJsonJWT.h"
 
+const String NO_AUTH_JWT_SECRET = "NO_AUTH";
+const String NO_AUTH_JWT_PAYLOAD = "{\"username\":\"guest\",\"noAuth\":true}";
+const String NO_AUTH_JWT_SIGNED = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Imd1ZXN0Iiwibm9BdXRoIjp0cnVlfQ.cDADZah2PdnWgiQyp7lwc69m6BC9oIOlA-IuyH3sL4o";
+
 WebServer webServer;
 DataFilesManager dataFilesManager("/data-files");
 OTAManager otaManager;
+#ifdef SECRET_JWT
 ArduinoJsonJWT jwtHandler(SECRET_JWT);
+#else
+ArduinoJsonJWT jwtHandler(NO_AUTH_JWT_SECRET);
+#endif
 JsonDocument doc;
 
 // built-in LED
@@ -56,43 +64,51 @@ void setupLed() {
 }
 
 bool ensureAuthenticated() {
-  String jwt = webServer.getCookie("esp.login");
-  if (!jwt.length()) {
-    webServer.send(401, "text/plain", "Unauthorized");
+  #ifdef SECRET_JWT
+    String jwt = webServer.getCookie("esp.login");
+    if (!jwt.length()) {
+      webServer.send(401, "text/plain", "Unauthorized");
+      jwt.clear();
+      return false;
+    }
+    DynamicJsonDocument payloadDocument(MAX_JWT_SIZE);
+    jwtHandler.parseJWT(jwt, payloadDocument);
+    if (payloadDocument.isNull()) {
+      webServer.send(403, "text/plain", "Forbidden");
+      jwt.clear();
+      return false;
+    }
     jwt.clear();
-    return false;
-  }
-  DynamicJsonDocument payloadDocument(MAX_JWT_SIZE);
-  jwtHandler.parseJWT(jwt, payloadDocument);
-  if (payloadDocument.isNull()) {
-    webServer.send(403, "text/plain", "Forbidden");
-    jwt.clear();
-    return false;
-  }
-  jwt.clear();
-  return true;
+    return true;
+  #else
+    return true;
+  #endif
 }
 
 String authPayload() {
-  String jwt = webServer.getCookie("esp.login");
-  if (!jwt.length()) {
-    webServer.send(401, "text/plain", "Unauthorized");
-    jwt.clear();
-    return "";
-  }
-  DynamicJsonDocument payloadDocument(MAX_JWT_SIZE);
-  jwtHandler.parseJWT(jwt, payloadDocument);
-  if (payloadDocument.isNull()) {
-    jwt.clear();
-    // webServer.setCookie("esp.login", "");
-    webServer.send(403, "text/plain", "Forbidden");
-    return "";
-  }
+  #ifdef SECRET_JWT
+    String jwt = webServer.getCookie("esp.login");
+    if (!jwt.length()) {
+      webServer.send(401, "text/plain", "Unauthorized");
+      jwt.clear();
+      return "";
+    }
+    DynamicJsonDocument payloadDocument(MAX_JWT_SIZE);
+    jwtHandler.parseJWT(jwt, payloadDocument);
+    if (payloadDocument.isNull()) {
+      jwt.clear();
+      // webServer.setCookie("esp.login", "");
+      webServer.send(403, "text/plain", "Forbidden");
+      return "";
+    }
 
-  String payload;
-  serializeJson(payloadDocument, payload);
+    String payload;
+    serializeJson(payloadDocument, payload);
 
-  return payload;
+    return payload;
+  #else
+    return NO_AUTH_JWT_PAYLOAD;
+  #endif
 }
 
 void handleRoot() {
@@ -137,23 +153,28 @@ void setup() {
 
   webServer.on("/api", HTTP_GET, handleRoot);
   webServer.on("/api/session", HTTP_POST, []() {
-    StaticJsonDocument<128> bodyObj;
-    deserializeJson(bodyObj, webServer.body());
+    #ifdef SECRET_JWT
+      StaticJsonDocument<128> bodyObj;
+      deserializeJson(bodyObj, webServer.body());
 
-    if (bodyObj["username"] != SECRET_ADMIN_USER || bodyObj["password"] != SECRET_ADMIN_PASS) {
-      webServer.send(401, "application/json", "{\"error\":\"Invalid username or password\"}");
-      return;
-    }
+      if (bodyObj["username"] != SECRET_ADMIN_USER || bodyObj["password"] != SECRET_ADMIN_PASS) {
+        webServer.send(401, "application/json", "{\"error\":\"Invalid username or password\"}");
+        return;
+      }
 
-    DynamicJsonDocument jsonDocument(MAX_JWT_SIZE);
-    JsonObject jwtObj = jsonDocument.to<JsonObject>();
-    jwtObj["username"] = "admin";
-    String json;
-    serializeJson(jwtObj, json);
-    String jwt = jwtHandler.buildJWT(jwtObj);
-    webServer.setCookie("esp.login", jwt + "; Max-Age=31536000"); // 1 year expiration
-    webServer.send(200, "application/json", "{\"user\":" + json + ",\"token\":\"" + jwt + "\"}");
-    jwt.clear();
+      DynamicJsonDocument jsonDocument(MAX_JWT_SIZE);
+      JsonObject jwtObj = jsonDocument.to<JsonObject>();
+      jwtObj["username"] = "admin";
+      String json;
+      serializeJson(jwtObj, json);
+      String jwt = jwtHandler.buildJWT(jwtObj);
+      webServer.setCookie("esp.login", jwt + "; Max-Age=31536000"); // 1 year expiration
+      webServer.send(200, "application/json", "{\"user\":" + json + ",\"token\":\"" + jwt + "\"}");
+      jwt.clear();
+    #else
+      webServer.setCookie("esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000"); // 1 year expiration
+      webServer.send(200, "application/json", NO_AUTH_JWT_PAYLOAD);
+    #endif
   });
   webServer.on("/api/profile", HTTP_GET, []() {
     String payload = authPayload();
@@ -161,11 +182,17 @@ void setup() {
       payload.clear();
       return;
     }
+    #ifndef SECRET_JWT
+      webServer.setCookie("esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000"); // 1 year expiration
+    #endif
+
     webServer.send(200, "application/json", payload);
     payload.clear();
   });
   webServer.on("/api/logout", HTTP_GET, []() {
-    webServer.setCookie("esp.login", "; Max-Age=0");\
+    #ifdef SECRET_JWT
+      webServer.setCookie("esp.login", "; Max-Age=0");
+    #endif
     webServer.send(200, "application/json", "{\"ok\":true\"}");
   });
   webServer.on("/api/led/toggle", HTTP_GET, handleToggleLedState);

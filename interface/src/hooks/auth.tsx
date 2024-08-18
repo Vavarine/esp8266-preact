@@ -4,6 +4,7 @@ import { useCallback, useContext, useEffect, useState } from 'preact/hooks'
 
 interface User {
 	username: string
+	noAuth?: boolean
 }
 
 interface AuthState {
