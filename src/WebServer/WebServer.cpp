@@ -42,24 +42,24 @@ void WebServer::begin() {
       String json;
       serializeJson(jwtObj, json);
       String jwt = jwtHandler.buildJWT(jwtObj);
-      this->setCookie("esp.login", jwt + "; Max-Age=31536000"); // 1 year expiration
+      this->setCookie("esp.login", jwt + "; Max-Age=31536000; HttpOnly"); // 1 year expiration
       this->send(200, "application/json", "{\"user\":" + json + ",\"token\":\"" + jwt + "\"}");
       jwt.clear();
     #else
-      this->setCookie("esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000"); // 1 year expiration
+      this->setCookie("esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000; HttpOnly"); // 1 year expiration
       this->send(200, "application/json", NO_AUTH_JWT_PAYLOAD);
     #endif
   });
   this->on("/api/profile", HTTP_GET, REQUIRE_AUTH, [this](String payload) {
     #ifndef SECRET_JWT
-      this->setCookie("esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000"); // 1 year expiration
+      this->setCookie("esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000; HttpOnly"); // 1 year expiration
     #endif
 
     this->send(200, "application/json", payload);
   });
   server.on("/api/logout", HTTP_GET, [this]() {
     #ifdef SECRET_JWT
-      this->setCookie("esp.login", "; Max-Age=0");
+      this->setCookie("esp.login", "; Max-Age=0; HttpOnly");
     #endif
     this->send(200, "application/json", "{\"ok\":true\"}");
   });
