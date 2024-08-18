@@ -58,7 +58,10 @@ void handleRoot() {
   webServer.send(200, "application/json", "{\"message\":\"hello from esp8266!\", \"success\":true}");
 }
 
-void handleToggleLedState() {
+void handleToggleLedState(User* user) {
+  Serial.println("GET /api/led/toggle");
+  Serial.println("Request from user: " + user->username);
+
   String ledState = dataFilesManager.load("led");
   bool newLedState = !ledState.toInt();
 

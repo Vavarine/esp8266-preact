@@ -2,6 +2,7 @@
 #include "LittleFS.h"
 #include "WebServer.h"
 #include "ArduinoJsonJWT/ArduinoJsonJWT.h"
+#include "utils/User.h"
 #include "secrets.h"
 
 WebServer::WebServer(int port) : server(port) {}
@@ -52,15 +53,15 @@ void WebServer::begin() {
       jwt.clear();
     #else
       this->setCookie("esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000; HttpOnly"); // 1 year expiration
-      this->send(200, "application/json", NO_AUTH_JWT_PAYLOAD);
+      this->send(200, "application/json", "{\"user\":" + NO_AUTH_JWT_PAYLOAD + ",\"token\":\"" + NO_AUTH_JWT_SIGNED + "\"}");
     #endif
   });
-  this->on("/api/profile", HTTP_GET, REQUIRE_AUTH, [this](String payload) {
+  this->on("/api/profile", HTTP_GET, REQUIRE_AUTH, [this]() {
     #ifndef SECRET_JWT
       this->setCookie("esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000; HttpOnly"); // 1 year expiration
     #endif
 
-    this->send(200, "application/json", payload);
+    this->send(200, "application/json", this->getJWTPayload());
   });
   server.on("/api/logout", HTTP_GET, [this]() {
     #ifdef SECRET_JWT
@@ -100,12 +101,11 @@ void WebServer::on(const String &uri, HTTPMethod method, Auth auth, ESP8266WebSe
 void WebServer::on(const String &uri, HTTPMethod method, Auth auth, WebServer::TAuthenticatedHandlerFunction handler) {
   if (auth == REQUIRE_AUTH) {
     server.on(uri, method, [this, handler]() {
-      String payload = this->authPayload();
-      if (!payload) {
-        payload.clear();
+      User* user = this->getUser();
+      if (!user->username) {
         return;
       }
-      handler(payload);
+      handler(user);
     });
   }
 }
@@ -216,13 +216,15 @@ bool WebServer::ensureAuthenticated() {
   #endif
 }
 
-String WebServer::authPayload() {
+
+
+String WebServer::getJWTPayload() {
   #ifdef SECRET_JWT
     String jwt = this->getCookie("esp.login");
     if (!jwt.length()) {
       this->send(401, "text/plain", "Unauthorized");
       jwt.clear();
-      return "";
+      return emptyString;
     }
     JsonDocument payloadDocument;
     jwtHandler.parseJWT(jwt, payloadDocument);
@@ -230,7 +232,7 @@ String WebServer::authPayload() {
       jwt.clear();
       // this->setCookie("esp.login", "");
       this->send(403, "text/plain", "Forbidden");
-      return "";
+      return emptyString;
     }
 
     String payload;
@@ -240,4 +242,28 @@ String WebServer::authPayload() {
   #else
     return NO_AUTH_JWT_PAYLOAD;
   #endif
+}
+
+User* WebServer::getUser() {
+  #ifdef SECRET_JWT
+    String jwt = this->getCookie("esp.login");
+    if (!jwt.length()) {
+      this->send(401, "text/plain", "Unauthorized");
+      jwt.clear();
+      return new User(emptyString);
+    }
+    JsonDocument payloadDocument;
+    jwtHandler.parseJWT(jwt, payloadDocument);
+    if (payloadDocument.isNull()) {
+      jwt.clear();
+      // this->setCookie("esp.login", "");
+      this->send(403, "text/plain", "Forbidden");
+      return new User(emptyString);
+    }
+  #else
+    JsonDocument payloadDocument;
+    deserializeJson(payloadDocument, NO_AUTH_JWT_PAYLOAD);
+  #endif
+
+  return new User(payloadDocument["username"].as<String>());
 }
