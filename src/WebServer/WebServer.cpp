@@ -26,6 +26,11 @@ void WebServer::begin() {
     return;
   }
 
+  server.on("/api/ping", HTTP_GET, [this]() {
+    Serial.println("GET /api/ping");
+    server.send(200, "text/plain", "pong");
+  });
+
   server.on("/api/session", HTTP_POST, [this]() {
     #ifdef SECRET_JWT
       JsonDocument bodyObj;
