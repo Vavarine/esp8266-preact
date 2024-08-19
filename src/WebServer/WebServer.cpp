@@ -170,7 +170,6 @@ String WebServer::arg(const String &name) {
 void WebServer::handleNotFound() {
   if (!handleFileRead(server.uri())) {
     // return index.html if it doesn't exist
-    // handleFileRead("/index.html");
     server.sendHeader("Content-Encoding", "gzip");
     server.send_P(200, "text/html", (const char *)static_files::f_index_html_contents, static_files::f_index_html_size);
   }
