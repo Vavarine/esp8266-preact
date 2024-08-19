@@ -13,9 +13,8 @@ This project is a simple template to start a new project with Preact, tailwind a
 3. Omit the secret `SECRET_JWT` for disabling authentication.
 4. Install the dependencies inside the `interface` folder with `yarn`
 5. Run `yarn build` to build the interface
-6. Build and upload the file system image with `pio run -t buildfs && pio run -t uploadfs`, or use the [PlatformIO IDE](https://randomnerdtutorials.com/esp32-vs-code-platformio-spiffs/)
-7. Build and upload the code with `pio run -t upload` or use the PlatformIO IDE.
-8. Open the serial monitor to see the IP address of the ESP8266 and access it on your browser.
+6. Build and upload the code with `pio run -t upload` or use the PlatformIO IDE.
+7. Open the serial monitor to see the IP address of the ESP8266 and access it on your browser.
 
 ### Development
 

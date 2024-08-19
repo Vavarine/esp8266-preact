@@ -4,6 +4,8 @@
 #include "ArduinoJsonJWT/ArduinoJsonJWT.h"
 #include "utils/User.h"
 #include "secrets.h"
+#include "static_files.h"
+#include <pgmspace.h>
 
 WebServer::WebServer(int port) : server(port) {}
 
@@ -73,6 +75,24 @@ void WebServer::begin() {
   server.onNotFound([this]() {
     this->handleNotFound();
   });
+
+  // Serve static files from PROGMEM
+  server.on("/", [this](){
+    server.sendHeader("Content-Encoding", "gzip");
+    server.send_P(200, "text/html", (const char *)static_files::f_index_html_contents, static_files::f_index_html_size);
+  });
+
+  for (int i = 0; i < static_files::num_of_files; i++) {
+    server.on(static_files::files[i].path, [this, i](){
+      String contentType = static_files::files[i].type;
+      if (contentType == "text/css" || contentType == "application/javascript") {
+        server.sendHeader("Cache-Control", "max-age=31536000");
+      }
+
+      server.sendHeader("Content-Encoding", "gzip");
+      server.send_P(200, static_files::files[i].type, (const char *)static_files::files[i].contents, static_files::files[i].size);
+    });
+  }
 
   Serial.println("HTTP server started");
 }
@@ -150,7 +170,9 @@ String WebServer::arg(const String &name) {
 void WebServer::handleNotFound() {
   if (!handleFileRead(server.uri())) {
     // return index.html if it doesn't exist
-    handleFileRead("/index.html");
+    // handleFileRead("/index.html");
+    server.sendHeader("Content-Encoding", "gzip");
+    server.send_P(200, "text/html", (const char *)static_files::f_index_html_contents, static_files::f_index_html_size);
   }
 }
 
