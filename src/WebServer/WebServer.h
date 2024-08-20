@@ -1,7 +1,12 @@
 #ifndef WEBSERVER_H
 #define WEBSERVER_H
 
+#ifdef ESP32
+#include <Webserver.h>
+#elif defined(ESP8266)
 #include <ESP8266WebServer.h>
+#endif
+
 #include "LittleFS.h"
 #include "utils/User.h"
 
