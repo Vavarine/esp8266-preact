@@ -420,10 +420,9 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-2.0.2.tgz#d9fae00a2d5cb40f92cfe64b47ad749fbc38f917"
   integrity sha512-6EwiSjwWYP7pTckG6I5eyFANjPhmPjUX9JRLUSfNPC7FX7zK9gyZAfUEaECL6ALTpGX5AjnBq3C9XmVWPitNpw==
 
-"@ikoz/vite-plugin-preact-esp32@^0.1.0":
+"@ikoz/vite-plugin-preact-esp32@github:Brunight/vite-plugin-preact-esp32#build":
   version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@ikoz/vite-plugin-preact-esp32/-/vite-plugin-preact-esp32-0.1.0.tgz#d0f76ffdfb1daffd7ee1da0939a0b72be26be001"
-  integrity sha512-lgSSlsgD7LiiLLJJrsDQGytLilMCSrQmaCU3qKjUkENo8XMwoKvwd8IDrVzMTnAI44f32lgjnp7f9NJCAjk+Qw==
+  resolved "https://codeload.github.com/Brunight/vite-plugin-preact-esp32/tar.gz/316789ae78762c4e42843e2ee8ef8cb9e572887b"
 
 "@isaacs/cliui@^8.0.2":
   version "8.0.2"
