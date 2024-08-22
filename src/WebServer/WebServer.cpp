@@ -46,7 +46,7 @@ void WebServer::begin() {
 
       JsonDocument jsonDocument;
       JsonObject jwtObj = jsonDocument.to<JsonObject>();
-      jwtObj["username"] = "admin";
+      jwtObj["username"] = SECRET_ADMIN_USER;
       String json;
       serializeJson(jwtObj, json);
       String jwt = jwtHandler.buildJWT(jwtObj);
