@@ -14,7 +14,7 @@
 		"uuid": "^10.0.0"
 	},
 	"devDependencies": {
-		"@ikoz/vite-plugin-preact-esp32": "^0.1.0",
+		"@ikoz/vite-plugin-preact-esp32": "github:Brunight/vite-plugin-preact-esp32#build",
 		"@preact/preset-vite": "^2.5.0",
 		"@types/node": "^22.1.0",
 		"@types/uuid": "^10.0.0",
