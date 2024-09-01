@@ -1,4 +1,4 @@
-#include <ESP8266WebServer.h>
+#include <ESPAsyncWebServer.h>
 #include "LittleFS.h"
 #include "WebServer.h"
 #include "ArduinoJsonJWT/ArduinoJsonJWT.h"
@@ -19,28 +19,35 @@ ArduinoJsonJWT jwtHandler(SECRET_JWT);
 ArduinoJsonJWT jwtHandler(NO_AUTH_JWT_SECRET);
 #endif
 
-void WebServer::begin() {
-  server.collectHeaders("Cookie");
-  server.begin();
-  server.enableCORS(true);
+bool beginLittleFS() {
+  #ifdef ESP32
+    return LittleFS.begin(true);
+  #elif defined(ESP8266)
+    return LittleFS.begin();
+  #endif
+}
 
-  if(!LittleFS.begin()) {
+void WebServer::begin() {
+  // Enable CORS
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+
+  if (!beginLittleFS()) {
     Serial.println("An Error has occurred while mounting LittleFS");
     return;
   }
 
-  server.on("/api/ping", HTTP_GET, [this]() {
+  server.on("/api/ping", HTTP_GET, [this](AsyncWebServerRequest* request) {
     Serial.println("GET /api/ping");
-    server.send(200, "text/plain", "pong");
+    request->send(200, "text/plain", "pong");
   });
 
-  server.on("/api/session", HTTP_POST, [this]() {
+  this->on("/api/session", HTTP_POST, [this](AsyncWebServerRequest* request, String body) {
     #ifdef SECRET_JWT
       JsonDocument bodyObj;
-      deserializeJson(bodyObj, this->body());
+      deserializeJson(bodyObj, body);
 
       if (bodyObj["username"] != SECRET_ADMIN_USER || bodyObj["password"] != SECRET_ADMIN_PASS) {
-        this->send(401, "application/json", "{\"error\":\"Invalid username or password\"}");
+        request->send(401, "application/json", "{\"error\":\"Invalid username or password\"}");
         return;
       }
 
@@ -50,105 +57,119 @@ void WebServer::begin() {
       String json;
       serializeJson(jwtObj, json);
       String jwt = jwtHandler.buildJWT(jwtObj);
-      this->setCookie("esp.login", jwt + "; Max-Age=31536000; HttpOnly"); // 1 year expiration
-      this->send(200, "application/json", "{\"user\":" + json + ",\"token\":\"" + jwt + "\"}");
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"user\":" + json + ",\"token\":\"" + jwt + "\"}");
+      this->setCookie(response, "esp.login", jwt + "; Max-Age=31536000; HttpOnly"); // 1 year expiration
+      request->send(response);
       jwt.clear();
     #else
-      this->setCookie("esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000; HttpOnly"); // 1 year expiration
-      this->send(200, "application/json", "{\"user\":" + NO_AUTH_JWT_PAYLOAD + ",\"token\":\"" + NO_AUTH_JWT_SIGNED + "\"}");
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"user\":" + NO_AUTH_JWT_PAYLOAD + ",\"token\":\"" + NO_AUTH_JWT_SIGNED + "\"}");
+      this->setCookie(response, "esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000; HttpOnly"); // 1 year expiration
+      request->send(response);
     #endif
   });
-  this->on("/api/profile", HTTP_GET, REQUIRE_AUTH, [this]() {
+  this->on("/api/profile", HTTP_GET, REQUIRE_AUTH, [this](AsyncWebServerRequest* request) {
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", this->getJWTPayload(request));
     #ifndef SECRET_JWT
-      this->setCookie("esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000; HttpOnly"); // 1 year expiration
+      this->setCookie(response, "esp.login", NO_AUTH_JWT_SIGNED + "; Max-Age=31536000; HttpOnly"); // 1 year expiration
     #endif
-
-    this->send(200, "application/json", this->getJWTPayload());
+    request->send(response);
   });
-  server.on("/api/logout", HTTP_GET, [this]() {
+  server.on("/api/logout", HTTP_GET, [this](AsyncWebServerRequest* request) {
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"ok\":true\"}");
     #ifdef SECRET_JWT
-      this->setCookie("esp.login", "; Max-Age=0; HttpOnly");
+      this->setCookie(response, "esp.login", "; Max-Age=0; HttpOnly");
     #endif
-    this->send(200, "application/json", "{\"ok\":true\"}");
-  });
-
-  server.onNotFound([this]() {
-    this->handleNotFound();
-  });
-
-  // Serve static files from PROGMEM
-  server.on("/", [this](){
-    server.sendHeader("Content-Encoding", "gzip");
-    server.send_P(200, "text/html", (const char *)static_files::f_index_html_contents, static_files::f_index_html_size);
+    request->send(response);
   });
 
   for (int i = 0; i < static_files::num_of_files; i++) {
-    server.on(static_files::files[i].path, [this, i](){
+    server.on(static_files::files[i].path, [this, i](AsyncWebServerRequest *request){
       String contentType = static_files::files[i].type;
+      AsyncWebServerResponse *response = request->beginResponse_P(200, static_files::files[i].type, static_files::files[i].contents, static_files::files[i].size);
+      response->addHeader("Content-Encoding", "gzip");
       if (contentType == "text/css" || contentType == "application/javascript") {
-        server.sendHeader("Cache-Control", "max-age=31536000");
+        response->addHeader("Cache-Control", "max-age=31536000");
       }
-
-      server.sendHeader("Content-Encoding", "gzip");
-      server.send_P(200, static_files::files[i].type, (const char *)static_files::files[i].contents, static_files::files[i].size);
+      request->send(response);
     });
   }
 
+  // Serve static files from PROGMEM
+  server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request){
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", static_files::f_index_html_contents, static_files::f_index_html_size);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
+  });
+
+  server.onNotFound([this](AsyncWebServerRequest *request) {
+    this->handleNotFound(request);
+  });
+
+  server.begin();
   Serial.println("HTTP server started");
 }
 
-void WebServer::handleClient() {
-  server.handleClient();
+void WebServer::on(const String &uri, WebRequestMethod method, ArRequestHandlerFunction onRequest) {
+  server.on(uri.c_str(), method, onRequest);
 }
 
-void WebServer::on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction handler) {
-  server.on(uri, method, handler);
+void WebServer::on(const String &uri, WebRequestMethod method, WebServer::ArRequestWithBodyHandlerFunction onRequest) {
+  server.on(uri.c_str(), method, [onRequest](AsyncWebServerRequest *request) {
+    String body = String((const char *)request->_tempObject);
+    onRequest(request, body);
+  }, NULL, _bodyHandler);
 }
 
-void WebServer::on(const String &uri, HTTPMethod method, Auth auth, ESP8266WebServer::THandlerFunction handler) {
+void WebServer::on(const String &uri, WebRequestMethod method, Auth auth, WebServer::ArRequestWithBodyHandlerFunction onRequest) {
+  server.on(uri.c_str(), method, [this, auth, onRequest](AsyncWebServerRequest *request) {
+    const char* body = (const char *)request->_tempObject;
+    if (auth == REQUIRE_AUTH && !this->ensureAuthenticated(request)) {
+      return;
+    }
+    onRequest(request, body);
+  }, NULL, _bodyHandler);
+}
+
+void WebServer::on(const String &uri, WebRequestMethod method, Auth auth, ArRequestHandlerFunction onRequest) {
+  server.on(uri.c_str(), method, [this, auth, onRequest](AsyncWebServerRequest *request) {
+    if (auth == REQUIRE_AUTH && !this->ensureAuthenticated(request)) {
+      return;
+    }
+    onRequest(request);
+  });
+}
+
+void WebServer::on(const String &uri, WebRequestMethod method, Auth auth, WebServer::ArAuthenticatedRequestHandlerFunction onRequest) {
   if (auth == REQUIRE_AUTH) {
-    server.on(uri, method, [this, handler]() {
-      if (!this->ensureAuthenticated()) {
+    server.on(uri.c_str(), method, [this, onRequest](AsyncWebServerRequest *request) {
+      User* user = this->getUser(request);
+      if (!user->username.length()) {
         return;
       }
-      handler();
+      onRequest(request, user);
     });
-  } else {
-    server.on(uri, method, handler);
+  }
+}
+void WebServer::on(const String &uri, WebRequestMethod method, Auth auth, WebServer::ArAuthenticatedRequestWithBodyHandlerFunction onRequest) {
+  if (auth == REQUIRE_AUTH) {
+    this->on(uri.c_str(), method, [this, onRequest](AsyncWebServerRequest *request, String body) {
+      User* user = this->getUser(request);
+      if (!user->username.length()) {
+        return;
+      }
+      onRequest(request, user, body);
+    });
   }
 }
 
-void WebServer::on(const String &uri, HTTPMethod method, Auth auth, WebServer::TAuthenticatedHandlerFunction handler) {
-  if (auth == REQUIRE_AUTH) {
-    server.on(uri, method, [this, handler]() {
-      User* user = this->getUser();
-      if (!user->username) {
-        return;
-      }
-      handler(user);
-    });
-  }
+void WebServer::setCookie(AsyncWebServerResponse *response, const String name, const String value) {
+  response->addHeader("Set-Cookie", name + "=" + value + ";");
 }
 
-void WebServer::send(int code, const String &content_type, const String &content) {
-  server.send(code, content_type, content);
-}
-
-void WebServer::send(int code) {
-  server.send(code);
-}
-
-String WebServer::body() {
-  return server.arg("plain");
-}
-
-void WebServer::setCookie(const String name, const String value) {
-  server.sendHeader("Set-Cookie", name + "=" + value + ";");
-}
-
-String WebServer::getCookie(const String name) {
-  if (server.hasHeader("Cookie")) {
-    String cookie = server.header("Cookie");
+String WebServer::getCookie(AsyncWebServerRequest* request, const String name) {
+  if (request->hasHeader("Cookie")) {
+    AsyncWebHeader* h = request->getHeader("Cookie");
+    String cookie = h->value();
     int keyIndex = cookie.indexOf(name + "=");
     if (keyIndex == -1) {
       return ""; // Key not found
@@ -163,38 +184,41 @@ String WebServer::getCookie(const String name) {
   return "";
 }
 
-String WebServer::arg(const String &name) {
-  return server.arg(name);
-}
+void WebServer::handleNotFound(AsyncWebServerRequest *request) {
+  if (request->method() != HTTP_GET) {
+    request->send(404, "text/plain", "Not found");
+    return;
+  }
 
-void WebServer::handleNotFound() {
-  if (!handleFileRead(server.uri())) {
+  if (!handleFileRead(request)) {
     // return index.html if it doesn't exist
-    server.sendHeader("Content-Encoding", "gzip");
-    server.send_P(200, "text/html", (const char *)static_files::f_index_html_contents, static_files::f_index_html_size);
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", static_files::f_index_html_contents, static_files::f_index_html_size);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
   }
 }
 
-bool WebServer::handleFileRead(String path) {
+bool WebServer::handleFileRead(AsyncWebServerRequest *request) {
+  String path = request->url();
   if (path.endsWith("/")) {
     path += "index.html";
   }
 
+  
+  if (!LittleFS.exists(path)) {
+    return false;
+  }
+
   String contentType = getContentType(path);
 
+  AsyncWebServerResponse *response = request->beginResponse(LittleFS, path, contentType);
+
   if (contentType == "text/css" || contentType == "application/javascript") {
-    server.sendHeader("Cache-Control", "max-age=31536000");
+    response->addHeader("Cache-Control", "max-age=31536000");
   }
 
-  if (LittleFS.exists(path)) {
-    File file = LittleFS.open(path, "r");
-    server.streamFile(file, contentType);
-
-    file.close();
-    return true;
-  }
-
-  return false;
+  request->send(response);
+  return true;
 }
 
 String WebServer::getContentType(String filename) {
@@ -215,18 +239,33 @@ String WebServer::getContentType(String filename) {
   return "text/plain";
 }
 
-bool WebServer::ensureAuthenticated() {
+void WebServer::_bodyHandler(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+  Serial.println("OMG incoming body");
+  if (!request->_tempObject)
+  {
+      request->_tempObject = new char[total + 1];
+  }
+  char *tempObject = (char *)request->_tempObject;
+  for (unsigned int i = 0; i < len; i++)
+  {
+      tempObject[index + i] = (char)data[i];
+  }
+  tempObject[total] = '\0';
+  Serial.println("Parsing request body: " + String(tempObject));
+}
+
+bool WebServer::ensureAuthenticated(AsyncWebServerRequest *request) {
   #ifdef SECRET_JWT
-    String jwt = this->getCookie("esp.login");
+    String jwt = getCookie(request, "esp.login");
     if (!jwt.length()) {
-      this->send(401, "text/plain", "Unauthorized");
+      request->send(401, "text/plain", "Unauthorized");
       // jwt.clear();
       return false;
     }
     JsonDocument payloadDocument;
     jwtHandler.parseJWT(jwt, payloadDocument);
     if (payloadDocument.isNull()) {
-      this->send(403, "text/plain", "Forbidden");
+      request->send(403, "text/plain", "Forbidden");
       // jwt.clear();
       return false;
     }
@@ -237,13 +276,11 @@ bool WebServer::ensureAuthenticated() {
   #endif
 }
 
-
-
-String WebServer::getJWTPayload() {
+String WebServer::getJWTPayload(AsyncWebServerRequest *request) {
   #ifdef SECRET_JWT
-    String jwt = this->getCookie("esp.login");
+    String jwt = getCookie(request, "esp.login");
     if (!jwt.length()) {
-      this->send(401, "text/plain", "Unauthorized");
+      request->send(401, "text/plain", "Unauthorized");
       jwt.clear();
       return emptyString;
     }
@@ -252,7 +289,7 @@ String WebServer::getJWTPayload() {
     if (payloadDocument.isNull()) {
       jwt.clear();
       // this->setCookie("esp.login", "");
-      this->send(403, "text/plain", "Forbidden");
+      request->send(403, "text/plain", "Forbidden");
       return emptyString;
     }
 
@@ -265,11 +302,11 @@ String WebServer::getJWTPayload() {
   #endif
 }
 
-User* WebServer::getUser() {
+User* WebServer::getUser(AsyncWebServerRequest *request) {
   #ifdef SECRET_JWT
-    String jwt = this->getCookie("esp.login");
+    String jwt = getCookie(request, "esp.login");
     if (!jwt.length()) {
-      this->send(401, "text/plain", "Unauthorized");
+      request->send(401, "text/plain", "Unauthorized");
       jwt.clear();
       return new User(emptyString);
     }
@@ -278,7 +315,7 @@ User* WebServer::getUser() {
     if (payloadDocument.isNull()) {
       jwt.clear();
       // this->setCookie("esp.login", "");
-      this->send(403, "text/plain", "Forbidden");
+      request->send(403, "text/plain", "Forbidden");
       return new User(emptyString);
     }
   #else

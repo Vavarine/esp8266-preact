@@ -1,11 +1,7 @@
-#ifndef WEBSERVER_H
-#define WEBSERVER_H
+#ifndef WEBSERVERHANDLER_H
+#define WEBSERVERHANDLER_H
 
-#ifdef ESP32
-#include <Webserver.h>
-#elif defined(ESP8266)
-#include <ESP8266WebServer.h>
-#endif
+#include <ESPAsyncWebServer.h>
 
 #include "LittleFS.h"
 #include "utils/User.h"
@@ -15,39 +11,37 @@ enum Auth { REQUIRE_AUTH };
 class WebServer {
 public:
   WebServer(int port = 80);
-  typedef std::function<void(User* user)> TAuthenticatedHandlerFunction;
+  typedef std::function<void(AsyncWebServerRequest *request, User* user)> ArAuthenticatedRequestHandlerFunction;
+  typedef std::function<void(AsyncWebServerRequest *request, String body)> ArRequestWithBodyHandlerFunction;
+  typedef std::function<void(AsyncWebServerRequest *request, User* user, String body)> ArAuthenticatedRequestWithBodyHandlerFunction;
 
   void begin();
 
-  void handleClient();
+  void on(const String &uri, WebRequestMethod method, ArRequestHandlerFunction onRequest);
+  void on(const String &uri, WebRequestMethod method, ArRequestWithBodyHandlerFunction onRequest);
+  void on(const String &uri, WebRequestMethod method, Auth auth, ArRequestHandlerFunction onRequest);
+  void on(const String &uri, WebRequestMethod method, Auth auth, ArRequestWithBodyHandlerFunction onRequest);
+  void on(const String &uri, WebRequestMethod method, Auth auth, ArAuthenticatedRequestHandlerFunction onRequest);
+  void on(const String &uri, WebRequestMethod method, Auth auth, ArAuthenticatedRequestWithBodyHandlerFunction onRequest);
 
-  void on(const String &uri, HTTPMethod method, ESP8266WebServer::THandlerFunction handler);
-  void on(const String &uri, HTTPMethod method, Auth auth, ESP8266WebServer::THandlerFunction handler);
-  void on(const String &uri, HTTPMethod method, Auth auth, TAuthenticatedHandlerFunction handler);
+  static void setCookie(AsyncWebServerResponse *response, const String name, const String value);
 
-  void send(int code);
-  void send(int code, const String &content_type, const String &content);
-  
-  String body();
-
-  void setCookie(const String name, const String value);
-
-  String getCookie(const String name);
-
-  String arg(const String &name);
+  static String getCookie(AsyncWebServerRequest* request, const String name);
 
 private:
-  ESP8266WebServer server;
+  AsyncWebServer server;
 
-  void handleNotFound();
+  void handleNotFound(AsyncWebServerRequest *request);
 
-  bool handleFileRead(String path);
+  bool handleFileRead(AsyncWebServerRequest *request);
 
   String getContentType(String filename);
 
-  bool ensureAuthenticated();
-  String getJWTPayload();
-  User* getUser();
+  static bool ensureAuthenticated(AsyncWebServerRequest *request);
+  static String getJWTPayload(AsyncWebServerRequest *request);
+  static User* getUser(AsyncWebServerRequest *request);
+
+  static void _bodyHandler(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
 };
 
 #endif
