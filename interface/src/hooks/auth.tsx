@@ -45,6 +45,9 @@ export const AuthProvider = ({ children }: { children: ComponentChildren }) => {
 		async ({ username, password }: SignInCredentials) => {
 			const response = await fetch('/api/session', {
 				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
 				body: JSON.stringify({
 					username,
 					password
