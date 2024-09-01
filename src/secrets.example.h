@@ -9,5 +9,6 @@
 // #define SECRET_JWT "1234" // Optional - leaving empty will disable authentication
 // #define SECRET_ADMIN_USER "admin"
 // #define SECRET_ADMIN_PASS "admin8266"
+// #define SECRET_DISABLE_WIFI_SLEEP 1 // Optional - this can fix connection issues but will increase power consumption
 
 // #endif
