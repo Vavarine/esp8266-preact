@@ -34,7 +34,7 @@ void connectToWifi(const char *ssid, const char *password) {
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
-  #if SECRET_DISABLE_WIFI_SLEEP
+  #ifdef DISABLE_WIFI_SLEEP
     Serial.println("WARNING: Disabling WiFi sleep mode");
     WiFi.setSleep(false);
   #endif
