@@ -8,6 +8,8 @@ void::OTAManager::begin() {
     ArduinoOTA.setPassword((const char *)SECRET_OTA_PASSWORD);
   #endif
 
+  ArduinoOTA.setPort(8266);
+
   ArduinoOTA.onStart([]() {
     Serial.println("Received OTA request");
   });
