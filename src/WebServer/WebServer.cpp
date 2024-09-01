@@ -240,7 +240,6 @@ String WebServer::getContentType(String filename) {
 }
 
 void WebServer::_bodyHandler(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-  Serial.println("OMG incoming body");
   if (!request->_tempObject)
   {
       request->_tempObject = new char[total + 1];
