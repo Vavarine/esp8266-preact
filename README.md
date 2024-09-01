@@ -14,6 +14,10 @@ This project is a simple template to start a new project with Preact, tailwind a
 4. Build and upload the code with `pio run -t upload` or use the PlatformIO IDE.
 5. Open the serial monitor to see the IP address of the ESP8266 and access it on your browser.
 
+### ESP32
+
+To use this project in ESP32 boards, just open the `platformio.ini` file, comment the line with `default_envs = esp12e` and uncomment the line with `default_envs = node32s`. Platformio should handle everything else by itself.
+
 ### Development
 
 - Create a `interface/.env` file following the `interface/.env.example`
