@@ -1,4 +1,4 @@
-# Esp8266 Preact
+# Esp8266 / Esp32 Preact
 
 ## Description
 
